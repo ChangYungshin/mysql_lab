@@ -1,6 +1,39 @@
 0. 每個辦公室的業績狀況表 
-1. 業務業績排行榜, procedure
+SELECT a.officecode, sum(e.price) from offices as a, employees as b, customers as c, orders as d, 
+(SELECT ordernumber, sum(quantityOrdered*priceEach) as price from orderdetails group by 1) as e
+where a.officeCode=b.officeCode and b.employeeNumber=c.salesRepEmployeeNumber and c.customerNumber=d.customerNumber and d.orderNumber=e.ordernumber
+and d.status='shipped'
+group by a.officeCode;
+
+
+1. 業務業績排行榜, procedure//業績＝quantityOrdered*priceEach
+
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `ex1`(IN `start_date` DATE, IN `end_date` DATE)
+    NO SQL
+BEGIN
+	SELECT b.employeeNumber ,concat(b.firstName,"-",b.lastName) as name ,sum(e.price) as money  from  employees as b, customers as c, orders as d, 
+(SELECT ordernumber, sum(quantityOrdered*priceEach) as price from orderdetails group by 1) as e
+where  b.employeeNumber=c.salesRepEmployeeNumber and c.customerNumber=d.customerNumber and d.orderNumber=e.ordernumber
+and d.status='shipped' and d.orderDate between start_date and end_date group by 1,2 order by money desc;
+end$$
+DELIMITER ;
+
 2. 熱銷商品排行榜, procedure
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `ex2`(IN `start_date` DATE, IN `end_date` DATE)
+    NO SQL
+BEGIN
+	SELECT c.productCode,c.productName,sum(e.number) as total_number  ,sum(e.price) as total_money  from  products as c, orders as d, 
+(SELECT orderNumber,productCode,sum(quantityOrdered) as number, sum(quantityOrdered*priceEach) as price from orderdetails group by 1,2) as e
+where  c.productCode=e.productcode and d.orderNumber=e.ordernumber
+and d.status='shipped' and d.orderDate between start_date and end_date  group by 1,2 order by 3 desc;
+end$$
+DELIMITER ;
+
+
+
 3. 業務訂單取消的比例 orders.sttaus = canceled
-4. 低於商品建議售價MSRP的訂單及其實際售價
+4. 低於商品建議售價MSRP x 95% 的訂單及其實際售價
 5. 當訂單資料被修改及刪除的時候記錄在 log 資料表中, 時間及所有資料欄位
+
